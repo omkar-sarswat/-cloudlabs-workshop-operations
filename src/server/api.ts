@@ -16,6 +16,7 @@ import {
   filterEnvironments,
   rankAtRiskEnvironments,
   sortEnvironments,
+  toEnvironmentView,
   transitionEnvironment,
 } from "./domain.ts";
 import type { Environment } from "./model.ts";
@@ -175,7 +176,7 @@ export function createApi(options: ApiOptions): Express {
     );
     const start = (query.data.page - 1) * query.data.pageSize;
     sendValidated(response, environmentPageSchema, {
-      items: matching.slice(start, start + query.data.pageSize),
+      items: matching.slice(start, start + query.data.pageSize).map((environment) => toEnvironmentView(environment, currentTime)),
       total: matching.length,
       page: query.data.page,
       pageSize: query.data.pageSize,
@@ -204,13 +205,14 @@ export function createApi(options: ApiOptions): Express {
       sendProblem(response, 404, "The requested environment does not exist.", request.path);
       return;
     }
-    const transition = transitionEnvironment(environment, body.data.state, now());
+    const currentTime = now();
+    const transition = transitionEnvironment(environment, body.data.state, currentTime);
     if (!transition.ok) {
       sendProblem(response, 409, "The requested state transition is not allowed.", request.path);
       return;
     }
     if (transition.changed) options.environments.set(id.data, transition.environment);
-    sendValidated(response, environmentSchema, transition.environment);
+    sendValidated(response, environmentSchema, toEnvironmentView(transition.environment, currentTime));
   });
 
   app.get("/api/ai/at-risk", async (_request, response, next) => {
@@ -230,7 +232,7 @@ export function createApi(options: ApiOptions): Express {
 
   app.get("/api/openapi.json", (_request, response) => response.json(createOpenApiDocument()));
 
-  app.use((request, response) => {
+  app.use("/api", (request, response) => {
     sendProblem(response, 404, "No API route matches this request.", request.path);
   });
 

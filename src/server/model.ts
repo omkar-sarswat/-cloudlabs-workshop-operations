@@ -23,3 +23,9 @@ export interface SessionSummary {
   spendUsd: number;
   updatedAt: string;
 }
+
+export interface EnvironmentView extends Environment {
+  timeOnStepSeconds: number;
+  spendUsd: number;
+  completionPercent: number;
+}

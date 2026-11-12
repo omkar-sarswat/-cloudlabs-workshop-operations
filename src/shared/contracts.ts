@@ -13,6 +13,9 @@ export const environmentSchema = z.object({
   stepCount: z.number().int().min(1).max(100),
   error: z.string().max(300).nullable(),
   endedAt: z.iso.datetime().nullable(),
+  timeOnStepSeconds: z.number().int().min(0),
+  spendUsd: z.number().min(0),
+  completionPercent: z.number().int().min(0).max(100),
 }).strict();
 
 export const sessionSummarySchema = z.object({

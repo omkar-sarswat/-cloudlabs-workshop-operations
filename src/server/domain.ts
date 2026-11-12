@@ -4,7 +4,7 @@ import {
   statePriority,
   type EnvironmentState,
 } from "../shared/config.ts";
-import type { Environment, SessionSummary } from "./model.ts";
+import type { Environment, EnvironmentView, SessionSummary } from "./model.ts";
 
 const learners = [
   ["Avery Kim", "avery.kim"],
@@ -112,6 +112,15 @@ export function calculateSpendUsd(environment: Environment, now: Date): number {
   const end = environment.endedAt ? Math.min(now.getTime(), Date.parse(environment.endedAt)) : now.getTime();
   const elapsedHours = Math.max(0, end - started) / 3_600_000;
   return roundMoney(elapsedHours * dashboardConfig.estimatedCostPerHourUsd);
+}
+
+export function toEnvironmentView(environment: Environment, now: Date): EnvironmentView {
+  return {
+    ...environment,
+    timeOnStepSeconds: secondsBetween(environment.stepStartedAt, now),
+    spendUsd: calculateSpendUsd(environment, now),
+    completionPercent: Math.round((environment.currentStep / environment.stepCount) * 100),
+  };
 }
 
 export function filterEnvironments(
