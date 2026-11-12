@@ -126,9 +126,9 @@ describe("workshop REST API", () => {
   it("serves deterministic at-risk results when no model ranker is configured", async () => {
     const base = await startApi([row("LAB-001", "failed"), row("LAB-002", "in_use")]);
     const response = await fetch(`${base}/api/ai/at-risk`);
-    const body = await response.json() as { source: string; items: Array<{ id: string; reasons: string[] }> };
+    const body = await response.json() as { source: string; items: Array<{ id: string; learnerName: string; state: string; reasons: string[] }> };
     expect(response.status).toBe(200);
     expect(body.source).toBe("rules");
-    expect(body.items[0]).toMatchObject({ id: "LAB-001", reasons: ["Quota limit reached"] });
+    expect(body.items[0]).toMatchObject({ id: "LAB-001", learnerName: "Learner LAB-001", state: "failed", reasons: ["Quota limit reached"] });
   });
 });

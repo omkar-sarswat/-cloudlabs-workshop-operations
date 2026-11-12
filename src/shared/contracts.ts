@@ -58,6 +58,8 @@ export const transitionRequestSchema = z.object({
 
 export const atRiskItemSchema = z.object({
   id: environmentSchema.shape.id,
+  learnerName: environmentSchema.shape.learnerName,
+  state: environmentSchema.shape.state,
   score: z.number().int().min(1).max(1000),
   reasons: z.array(z.string().min(1).max(300)).min(1).max(3),
 }).strict();
