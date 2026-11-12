@@ -25,6 +25,7 @@ function environment(overrides: Partial<Environment> = {}): Environment {
     currentStep: 3,
     stepCount: 8,
     error: null,
+    endedAt: null,
     ...overrides,
   };
 }
@@ -50,9 +51,9 @@ describe("workshop domain", () => {
 
   it("filters and sorts server-side candidate rows", () => {
     const rows = [
-      environment({ id: "b", learnerName: "Bea Li", state: "ready", currentStep: 2 }),
+      environment({ id: "b", learnerName: "Bea Li", state: "ready", currentStep: 2, stepStartedAt: "2026-11-12T05:55:00.000Z" }),
       environment({ id: "a", learnerName: "Ari Jones", state: "failed", currentStep: 1, error: "Quota exceeded" }),
-      environment({ id: "c", learnerName: "Cal Reed", state: "in_use", currentStep: 4, stepStartedAt: now.toISOString() }),
+      environment({ id: "c", learnerName: "Cal Reed", state: "in_use", currentStep: 4, stepStartedAt: "2026-11-12T05:30:00.000Z" }),
     ];
 
     expect(filterEnvironments(rows, { state: "failed", search: "ari", riskOnly: false }, now).map((row) => row.id)).toEqual(["a"]);
@@ -75,7 +76,7 @@ describe("workshop domain", () => {
       failed: 1,
       completed: 1,
       averageCompletionPercent: 47,
-      spendUsd: 0.34,
+      spendUsd: 0.3,
       updatedAt: now.toISOString(),
     });
   });

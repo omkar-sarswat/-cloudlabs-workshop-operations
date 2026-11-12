@@ -1,0 +1,58 @@
+export const dashboardConfig = {
+  appTitle: "Workshop operations",
+  apiPort: 3001,
+  webPort: 5173,
+  environmentCount: 120,
+  stepNames: [
+    "Connect to the lab",
+    "Open the portal",
+    "Create a resource group",
+    "Deploy the network",
+    "Configure access",
+    "Run the workload",
+    "Check the results",
+    "Complete the lab",
+  ],
+  stuckThresholdSeconds: 20 * 60,
+  longProvisioningThresholdSeconds: 10 * 60,
+  estimatedCostPerHourUsd: 0.12,
+  seedSessionAgeSeconds: 55 * 60,
+  seedRuntimeBaseSeconds: 10 * 60,
+  seedRuntimeSpanSeconds: 70 * 60,
+  seedStatusModulo: {
+    failed: 17,
+    deprovisioned: 23,
+    provisioning: 7,
+    ready: 5,
+  },
+  seedStuckModulo: 11,
+  seedStuckRemainder: 3,
+  stepAdvanceAfterSeconds: 8 * 60,
+  simulationIntervalMs: 5_000,
+  provisioningReadyTickModulo: 4,
+  readyInUseTickModulo: 5,
+  pollIntervalMs: 5_000,
+  maxSearchLength: 80,
+  atRiskSummaryLimit: 5,
+  modelTimeoutMs: 3_000,
+  defaultOpenAIModel: "gpt-6-astra",
+  recordingDurationSeconds: 75,
+} as const;
+
+export const environmentStates = [
+  "provisioning",
+  "ready",
+  "in_use",
+  "failed",
+  "deprovisioned",
+] as const;
+
+export type EnvironmentState = (typeof environmentStates)[number];
+
+export const statePriority: Record<EnvironmentState, number> = {
+  failed: 0,
+  provisioning: 1,
+  in_use: 2,
+  ready: 3,
+  deprovisioned: 4,
+};
