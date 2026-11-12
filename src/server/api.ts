@@ -9,7 +9,6 @@ import {
   problemDetailsSchema,
   sessionSummarySchema,
   transitionRequestSchema,
-  type AtRiskDto,
 } from "../shared/contracts.ts";
 import {
   buildSessionSummary,
@@ -19,10 +18,11 @@ import {
   toEnvironmentView,
   transitionEnvironment,
 } from "./domain.ts";
+import type { AtRiskEnvironment } from "./domain.ts";
 import type { Environment } from "./model.ts";
 
 export interface RiskRankingResult {
-  items: AtRiskDto[];
+  items: AtRiskEnvironment[];
   source: "ai" | "rules";
 }
 
@@ -224,7 +224,11 @@ export function createApi(options: ApiOptions): Express {
             items: rankAtRiskEnvironments([...options.environments.values()], currentTime, dashboardConfig.atRiskSummaryLimit),
             source: "rules" as const,
           };
-      sendValidated(response, atRiskResponseSchema, { ...result, updatedAt: currentTime.toISOString() });
+      const items = result.items.flatMap((item) => {
+        const environment = options.environments.get(item.id);
+        return environment ? [{ ...item, learnerName: environment.learnerName, state: environment.state }] : [];
+      });
+      sendValidated(response, atRiskResponseSchema, { ...result, items, updatedAt: currentTime.toISOString() });
     } catch (error) {
       next(error);
     }
