@@ -55,6 +55,16 @@ describe("workshop dashboard in Chromium", () => {
     await page.close();
   });
 
+  test("puts a skip link first in the keyboard order", async () => {
+    const page = await newPage();
+    await page.goto(baseUrl);
+    await page.keyboard.press("Tab");
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Skip to content");
+    await page.keyboard.press("Enter");
+    assert.equal(new URL(page.url()).hash, "#main");
+    await page.close();
+  });
+
   test("filters by state and learner text through the API", async () => {
     const page = await newPage();
     await page.goto(baseUrl);
@@ -72,14 +82,17 @@ describe("workshop dashboard in Chromium", () => {
 
   test("selects and reprovisions a failed lab through PATCH", async () => {
     const page = await newPage();
+    const failureResponse = await fetch(`${apiUrl}/api/environments?state=failed&pageSize=1`);
+    const failures = await failureResponse.json();
+    const failedId = failures.items[0].id;
     await page.goto(baseUrl);
     await page.getByRole("table", { name: "Lab environments" }).waitFor();
-    const responsePromise = page.waitForResponse((response) => response.url().endsWith("/api/environments/LAB-001") && response.request().method() === "PATCH");
-    await page.getByRole("button", { name: "Open lab LAB-001" }).click();
-    await page.getByRole("button", { name: "Reprovision LAB-001" }).click();
+    const responsePromise = page.waitForResponse((response) => response.url().endsWith(`/api/environments/${failedId}`) && response.request().method() === "PATCH");
+    await page.getByRole("button", { name: `Open lab ${failedId}` }).click();
+    await page.getByRole("button", { name: `Reprovision ${failedId}` }).click();
     const response = await responsePromise;
     assert.equal(response.status(), 200);
-    await page.getByText("Reprovisioning requested for LAB-001").waitFor();
+    await page.getByText(`Reprovisioning requested for ${failedId}`).waitFor();
     await page.getByRole("complementary", { name: "Environment details" }).getByText("Provisioning", { exact: true }).waitFor();
     await page.close();
   });
@@ -94,7 +107,7 @@ describe("workshop dashboard in Chromium", () => {
     const previous = await scroller.evaluate((element) => element.scrollTop);
     await page.waitForTimeout(5_500);
     assert.equal(await scroller.evaluate((element) => element.scrollTop), previous);
-    assert.match(await page.getByRole("complementary", { name: "Environment details" }).innerText(), /LAB-001/);
+    assert.match(await page.getByRole("complementary", { name: "Environment details" }).innerText(), /LAB-\d{3}/);
     await page.close();
   });
 

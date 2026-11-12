@@ -32,6 +32,8 @@ export const dashboardConfig = {
   provisioningReadyTickModulo: 4,
   readyInUseTickModulo: 5,
   pollIntervalMs: 5_000,
+  atRiskPollIntervalMs: 30_000,
+  searchDebounceMs: 250,
   maxSearchLength: 80,
   atRiskSummaryLimit: 5,
   modelTimeoutMs: 3_000,

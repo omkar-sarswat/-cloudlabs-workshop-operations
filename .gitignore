@@ -4,6 +4,8 @@ coverage/
 .vitest/
 .playwright/
 .npm-cache/
+.impeccable/
+.local-browsers/
 .env
 .env.*
 !.env.example
