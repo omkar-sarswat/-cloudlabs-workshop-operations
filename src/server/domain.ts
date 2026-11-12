@@ -124,7 +124,7 @@ export function filterEnvironments(
     if (filters.state !== "all" && environment.state !== filters.state) return false;
     if (filters.riskOnly && environment.state !== "failed" && !isStuck(environment, now)) return false;
     if (!needle) return true;
-    return [environment.id, environment.learnerName, environment.learnerEmail, environment.labName]
+    return [environment.id, environment.learnerName, environment.learnerEmail, environment.labName, environment.error ?? ""]
       .some((value) => value.toLocaleLowerCase().includes(needle));
   });
 }

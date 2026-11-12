@@ -112,7 +112,7 @@ describe("workshop REST API", () => {
 
   it("reports missing records and unknown routes as problem details", async () => {
     const base = await startApi();
-    const missing = await fetch(`${base}/api/environments/NO-SUCH-LAB`, {
+    const missing = await fetch(`${base}/api/environments/LAB-999`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ state: "provisioning" }),
