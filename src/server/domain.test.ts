@@ -7,6 +7,7 @@ import {
   isStuck,
   seedEnvironments,
   sortEnvironments,
+  toEnvironmentView,
   transitionEnvironment,
 } from "./domain.ts";
 import type { Environment } from "./model.ts";
@@ -47,6 +48,14 @@ describe("workshop domain", () => {
     expect(calculateSpendUsd(item, now)).toBe(0.12);
     expect(isStuck(item, now)).toBe(true);
     expect(isStuck(environment({ stepStartedAt: "2026-11-12T05:55:00.000Z" }), now)).toBe(false);
+  });
+
+  it("serializes per-row elapsed time, spend, and completion on the server", () => {
+    expect(toEnvironmentView(environment(), now)).toMatchObject({
+      timeOnStepSeconds: 2_400,
+      spendUsd: 0.12,
+      completionPercent: 38,
+    });
   });
 
   it("filters and sorts server-side candidate rows", () => {
