@@ -55,6 +55,21 @@ describe("workshop dashboard in Chromium", () => {
     await page.close();
   });
 
+  test("contains the dense table scroll on a narrow screen", async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(baseUrl);
+    await page.getByRole("table", { name: "Lab environments" }).waitFor();
+    const overflow = await page.evaluate(() => ({
+      page: document.documentElement.scrollWidth,
+      viewport: window.innerWidth,
+      table: document.querySelector(".table-scroll"),
+    }));
+    assert.ok(overflow.table);
+    assert.ok(overflow.page <= overflow.viewport);
+    assert.ok(await page.locator(".table-scroll").evaluate((element) => element.scrollWidth > element.clientWidth));
+    await page.close();
+  });
+
   test("puts a skip link first in the keyboard order", async () => {
     const page = await newPage();
     await page.goto(baseUrl);

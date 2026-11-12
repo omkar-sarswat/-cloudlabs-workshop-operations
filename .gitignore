@@ -5,6 +5,7 @@ coverage/
 .playwright/
 .npm-cache/
 .impeccable/
+.taste-skill/
 .local-browsers/
 .env
 .env.*

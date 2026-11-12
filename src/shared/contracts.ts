@@ -1,17 +1,20 @@
 import { z } from "zod";
 import { dashboardConfig, environmentStates } from "./config.ts";
 
+export const environmentIdSchema = z.string().regex(new RegExp(`^LAB-\\d{${dashboardConfig.environmentIdDigits}}$`));
+const maximumAtRiskScore = Object.values(dashboardConfig.atRiskScore).reduce((total, weight) => total + weight, 0);
+
 export const environmentSchema = z.object({
-  id: z.string().regex(/^LAB-\d{3}$/),
-  learnerName: z.string().min(1).max(100),
-  learnerEmail: z.string().email().max(150),
-  labName: z.string().min(1).max(100),
+  id: environmentIdSchema,
+  learnerName: z.string().min(1).max(dashboardConfig.maxLearnerNameLength),
+  learnerEmail: z.string().email().max(dashboardConfig.maxLearnerEmailLength),
+  labName: z.string().min(1).max(dashboardConfig.maxLabNameLength),
   state: z.enum(environmentStates),
   startedAt: z.iso.datetime(),
   stepStartedAt: z.iso.datetime(),
-  currentStep: z.number().int().min(0).max(100),
-  stepCount: z.number().int().min(1).max(100),
-  error: z.string().max(300).nullable(),
+  currentStep: z.number().int().min(0).max(dashboardConfig.stepNames.length),
+  stepCount: z.number().int().min(1).max(dashboardConfig.stepNames.length),
+  error: z.string().max(dashboardConfig.maxIssueLength).nullable(),
   endedAt: z.iso.datetime().nullable(),
   timeOnStepSeconds: z.number().int().min(0),
   spendUsd: z.number().min(0),
@@ -60,8 +63,8 @@ export const atRiskItemSchema = z.object({
   id: environmentSchema.shape.id,
   learnerName: environmentSchema.shape.learnerName,
   state: environmentSchema.shape.state,
-  score: z.number().int().min(1).max(1000),
-  reasons: z.array(z.string().min(1).max(300)).min(1).max(3),
+  score: z.number().int().min(1).max(maximumAtRiskScore),
+  reasons: z.array(z.string().min(1).max(dashboardConfig.maxIssueLength)).min(1).max(dashboardConfig.maxRiskReasons),
 }).strict();
 
 export const atRiskResponseSchema = z.object({

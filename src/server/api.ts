@@ -3,6 +3,7 @@ import { z } from "zod";
 import { dashboardConfig } from "../shared/config.ts";
 import {
   atRiskResponseSchema,
+  environmentIdSchema,
   environmentPageSchema,
   environmentQuerySchema,
   environmentSchema,
@@ -97,7 +98,7 @@ function createOpenApiDocument() {
       "/environments/{id}": {
         patch: {
           summary: "Request a valid state transition",
-          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", pattern: "^LAB-[0-9]{3}$" } }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", pattern: `^LAB-[0-9]{${dashboardConfig.environmentIdDigits}}$` } }],
           requestBody: {
             required: true,
             content: { "application/json": { schema: { $ref: "#/components/schemas/TransitionRequest" } } },
@@ -131,7 +132,7 @@ function createOpenApiDocument() {
 export function createApi(options: ApiOptions): Express {
   const app = express();
   const now = options.now ?? (() => new Date());
-  const defaultOrigins = ["http://127.0.0.1:5173", "http://localhost:5173"];
+  const defaultOrigins = [`http://127.0.0.1:${dashboardConfig.webPort}`, `http://localhost:${dashboardConfig.webPort}`];
   const allowedOrigins = new Set(options.corsOrigins ?? process.env.CORS_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? defaultOrigins);
 
   app.disable("x-powered-by");
@@ -146,7 +147,7 @@ export function createApi(options: ApiOptions): Express {
       response.setHeader("Vary", "Origin");
       response.setHeader("Access-Control-Allow-Methods", "GET, PATCH, OPTIONS");
       response.setHeader("Access-Control-Allow-Headers", "Content-Type");
-      response.setHeader("Access-Control-Max-Age", "600");
+      response.setHeader("Access-Control-Max-Age", String(dashboardConfig.corsMaxAgeSeconds));
     }
     if (request.method === "OPTIONS") {
       response.status(204).end();
@@ -154,7 +155,7 @@ export function createApi(options: ApiOptions): Express {
     }
     next();
   });
-  app.use(express.json({ limit: "8kb", strict: true }));
+  app.use(express.json({ limit: dashboardConfig.maxJsonBodyBytes, strict: true }));
 
   app.get("/api/environments", (request, response) => {
     const query = environmentQuerySchema.safeParse(request.query);
@@ -190,7 +191,7 @@ export function createApi(options: ApiOptions): Express {
   });
 
   app.patch("/api/environments/:id", (request, response) => {
-    const id = z.string().regex(/^LAB-\d{3}$/).safeParse(request.params.id);
+    const id = environmentIdSchema.safeParse(request.params.id);
     if (!id.success) {
       sendProblem(response, 400, "The environment ID is invalid.", request.path);
       return;

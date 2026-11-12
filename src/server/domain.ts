@@ -75,15 +75,18 @@ export function seedEnvironments(now: Date): Environment[] {
     const [learnerName, emailPrefix] = learners[index % learners.length]!;
     const state = seedState(index + 1);
     const runtimeSeconds = dashboardConfig.seedRuntimeBaseSeconds
-      + ((index * 7919) % dashboardConfig.seedRuntimeSpanSeconds);
+      + ((index * dashboardConfig.seedRuntimeScatterMultiplier) % dashboardConfig.seedRuntimeSpanSeconds);
     const startedAt = new Date(now.getTime() - runtimeSeconds * 1000).toISOString();
     const isSeededStuck = index % dashboardConfig.seedStuckModulo === dashboardConfig.seedStuckRemainder;
-    const stepStartedAt = new Date(now.getTime() - (isSeededStuck ? dashboardConfig.stuckThresholdSeconds + 600 : 90) * 1000).toISOString();
+    const stepAgeSeconds = isSeededStuck
+      ? dashboardConfig.stuckThresholdSeconds + dashboardConfig.seedStuckOverageSeconds
+      : dashboardConfig.seedFreshStepAgeSeconds;
+    const stepStartedAt = new Date(now.getTime() - stepAgeSeconds * 1000).toISOString();
     const currentStep = state === "deprovisioned"
       ? dashboardConfig.stepNames.length
       : Math.min(dashboardConfig.stepNames.length - 1, Math.floor(runtimeSeconds / dashboardConfig.stepAdvanceAfterSeconds));
     const endedAt = state === "failed" || state === "deprovisioned"
-      ? new Date(now.getTime() - (index % 12) * 60_000).toISOString()
+      ? new Date(now.getTime() - (index % dashboardConfig.seedEndedAgeWindowMinutes) * 60_000).toISOString()
       : null;
 
     return {
@@ -240,15 +243,15 @@ export function rankAtRiskEnvironments(environments: Environment[], now: Date, l
       const reasons: string[] = [];
       let score = 0;
       if (environment.state === "failed") {
-        score += 100;
+        score += dashboardConfig.atRiskScore.failed;
         reasons.push(environment.error ?? "Environment failed");
       }
       if (isStuck(environment, now)) {
-        score += 50;
+        score += dashboardConfig.atRiskScore.stuck;
         reasons.push(`No progress for over ${Math.round(dashboardConfig.stuckThresholdSeconds / 60)} minutes`);
       }
       if (environment.state === "provisioning" && secondsBetween(environment.startedAt, now) >= dashboardConfig.longProvisioningThresholdSeconds) {
-        score += 25;
+        score += dashboardConfig.atRiskScore.slowProvisioning;
         reasons.push("Provisioning is taking longer than expected");
       }
       return { id: environment.id, score, reasons };
