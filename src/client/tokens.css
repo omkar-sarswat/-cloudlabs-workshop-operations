@@ -1,0 +1,134 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap");
+
+:root {
+  color-scheme: light;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Radix Colors: gray scale */
+  --color-page: #F9F9F9; /* gray-2 */
+  --color-panel: #FFFFFF;
+  --color-hairline: #D9D9D9; /* gray-6 */
+  --color-input-border: #CECECE; /* gray-7 */
+  --color-text: #202020; /* gray-12 */
+  --color-secondary: #646464; /* gray-11 */
+  --color-secondary-white: #646464; /* gray-11 */
+  --color-hover: #F0F0F0; /* gray-3 */
+  --color-selected: #E8E8E8; /* gray-4 */
+  --color-bar-track: #F9F9F9; /* gray-2 */
+  --color-bar-fill: #646464; /* gray-11 */
+  --color-neutral-segment: #E0E0E0; /* gray-5 */
+  --color-in-use-segment: #8D8D8D; /* gray-9 */
+  --color-ready-segment: #30A46C; /* green-9 */
+  --color-tick-done: #646464; /* gray-11 */
+  --color-tick-current: #646464; /* gray-11 */
+  --color-tick-remaining: #E0E0E0; /* gray-5 */
+  --color-white: #FFFFFF;
+  --color-shadow: #202020; /* gray-12 */
+  --color-scrim: #202020; /* gray-12 */
+
+  /* Radix Colors: semantic scales. Marks use step 11 for >= 3:1 contrast. */
+  --color-failed: #E5484D; /* red-9 */
+  --color-stuck: #AB6400; /* amber-11 */
+  --color-healthy: #218358; /* green-11 */
+  --color-provisioning: #0090FF; /* blue-9 */
+  --color-deprovisioned: #646464; /* gray-11 */
+  --color-failed-subtle: #FEEBEC; /* red-3 */
+  --color-stuck-subtle: #FFF7C2; /* amber-3 */
+  --color-healthy-subtle: #E6F6EB; /* green-3 */
+  --color-provisioning-subtle: #E6F4FE; /* blue-3 */
+  --color-danger-subtle: #FEEBEC; /* red-3 */
+  --color-danger-border: #F4A9AA; /* red-7 */
+  --color-warning-subtle: #FFF7C2; /* amber-3 */
+  --color-warning-border: #E9C162; /* amber-7 */
+  --color-success-subtle: #E6F6EB; /* green-3 */
+
+  /* Radix Colors: blue is reserved for links and focus. */
+  --color-focus: #0090FF; /* blue-9 */
+  --color-input-focus: #5EB1EF; /* blue-8 */
+  --color-accent-blue: #0D74CE; /* blue-11 */
+  --color-accent: #202020; /* gray-12 */
+  --color-accent-hover: #646464; /* gray-11 */
+  --color-accent-active: #838383; /* gray-10 */
+  --color-accent-ink: #FFFFFF;
+
+  --color-summary-bg: #F9F9F9; /* gray-2 */
+  --color-pill-track: #F0F0F0; /* gray-3 */
+  --color-badge-bg: #F0F0F0; /* gray-3 */
+  --color-control-track-border: #CECECE; /* gray-7 */
+  --color-surface-subtle: #F0F0F0; /* gray-3 */
+  --color-header-bg: #FFFFFF;
+  --color-chip-text: #646464; /* gray-11 */
+  --color-chip-hover: #F0F0F0; /* gray-3 */
+  --color-chip-active-count: #646464; /* gray-11 */
+  --color-tick-border: #646464; /* gray-11 */
+
+  --shadow-control-active: none;
+  --shadow-popover: 0 8px 20px rgb(32 32 32 / 12%), 0 2px 6px rgb(32 32 32 / 8%);
+  --shadow-inspector: none;
+
+  --font-ui: "Geist", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  --text-size-helper: 12px;
+  --text-size-chip: 13px;
+  --text-size-table: 13px;
+  --text-size-summary-secondary: 36px;
+  --text-size-summary-primary: 44px;
+  --text-size-inspector: 16px;
+  --text-size-column-header: 12px;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --line-height-tight: 20px;
+  --line-height-normal: 20px;
+  --numeric-features: tabular-nums;
+
+  --height-control: 32px;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --radius-pill: 6px;
+  --height-topbar: 48px;
+  --height-summary: 96px;
+  --height-filter-band: 40px;
+  --height-toolbar: 40px;
+  --height-table-header: 32px;
+  --height-row: 40px;
+  --height-row-compact: 32px;
+  --height-group-header: 32px;
+  --height-chip: 28px;
+  --height-tick: 6px;
+  --step-track-width: 94px;
+
+  --column-state: 120px;
+  --column-learner: 220px;
+  --column-lab: 160px;
+  --column-running: 160px;
+  --column-step: 150px;
+  --column-time: 96px;
+  --column-spend: 72px;
+  --column-event-min: 220px;
+  --column-event-max: 1fr;
+  --table-columns: 120px minmax(220px, 1.4fr) minmax(160px, 1fr) 150px 96px 72px minmax(220px, 1.6fr);
+  --table-columns-wide: 120px minmax(220px, 1.4fr) minmax(160px, 1fr) 160px 150px 96px 72px minmax(220px, 1.6fr);
+
+  --inspector-width: clamp(320px, 22vw, 440px);
+  --pane-gap: 0px;
+  --content-padding: 24px;
+  --cell-padding-inline: 12px;
+  --border-width: 1px;
+  --marker-width: 2px;
+  --focus-width: 2px;
+  --motion-ease: ease;
+  --dur-micro: 150ms;
+  --dur-short: 400ms;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+}

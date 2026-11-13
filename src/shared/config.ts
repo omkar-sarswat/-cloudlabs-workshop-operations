@@ -20,8 +20,15 @@ export const dashboardConfig = {
   seedRuntimeBaseSeconds: 10 * 60,
   seedRuntimeSpanSeconds: 70 * 60,
   seedRuntimeScatterMultiplier: 7919,
-  seedFreshStepAgeSeconds: 90,
-  seedStuckOverageSeconds: 600,
+  seedFreshStepAgeBaseSeconds: 45,
+  seedFreshStepAgeSpanSeconds: 14 * 60,
+  seedFreshStepAgeScatterMultiplier: 7919,
+  seedStuckOverageBaseSeconds: 60,
+  seedStuckOverageSpanSeconds: 2 * 60 * 60,
+  seedStuckAgeScatterMultiplier: 1543,
+  seedCompletedStepDurationBaseSeconds: 6 * 60,
+  seedCompletedStepDurationSpanSeconds: 7 * 60,
+  seedCompletedStepScatterMultiplier: 1877,
   seedEndedAgeWindowMinutes: 12,
   seedStatusModulo: {
     failed: 17,
@@ -31,7 +38,17 @@ export const dashboardConfig = {
   },
   seedStuckModulo: 11,
   seedStuckRemainder: 3,
+  // Hold each stuck learner for five minutes, then recover on a staggered five-minute schedule.
+  stuckMinimumVisibleSeconds: 5 * 60,
+  stuckRecoveryTickModulo: 60,
   stepAdvanceAfterSeconds: 8 * 60,
+  // A deterministic share of learners stalls long enough to keep stuck work visible.
+  simulatedStepStallRatePercent: 20,
+  // Every unfinished step returns through provisioning and ready, so both states keep cycling.
+  stepCompletionProvisioningRatePercent: 100,
+  stepCompletionRateWindowTicks: 100,
+  // Two additional in-use environments enter provisioning per five-second tick, spread by ID.
+  inUseRefreshesPerTick: 2,
   simulationIntervalMs: 5_000,
   provisioningReadyTickModulo: 4,
   readyInUseTickModulo: 5,
@@ -41,6 +58,7 @@ export const dashboardConfig = {
   corsMaxAgeSeconds: 600,
   searchDebounceMs: 250,
   maxSearchLength: 80,
+  maxFilterMinutes: 525_600,
   atRiskSummaryLimit: 5,
   atRiskScore: { failed: 100, stuck: 50, slowProvisioning: 25 },
   maxLearnerNameLength: 100,
@@ -57,6 +75,20 @@ export const environmentStates = [
   "in_use",
   "failed",
   "deprovisioned",
+] as const;
+
+export const labNames = [
+  "Cloud networking",
+  "Identity and access",
+  "Deploy a web app",
+  "Secure storage",
+] as const;
+
+export const failureReasons = [
+  "Deployment timed out",
+  "Quota limit reached",
+  "Network rule validation failed",
+  "Credential check failed",
 ] as const;
 
 export type EnvironmentState = (typeof environmentStates)[number];

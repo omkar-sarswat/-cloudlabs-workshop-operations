@@ -2,6 +2,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { dashboardConfig } from "./src/shared/config.ts";
 
+const apiPort = Number(process.env.API_PORT ?? dashboardConfig.apiPort);
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -10,7 +12,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/api": {
-        target: `http://127.0.0.1:${dashboardConfig.apiPort}`,
+        target: `http://127.0.0.1:${apiPort}`,
         changeOrigin: true,
       },
     },

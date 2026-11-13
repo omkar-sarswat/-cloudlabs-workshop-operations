@@ -1,7 +1,8 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
-import { dashboardConfig } from "../shared/config.ts";
+import { dashboardConfig, environmentStates, labNames } from "../shared/config.ts";
 import {
+  aiFilterResponseSchema,
   atRiskResponseSchema,
   environmentIdSchema,
   environmentPageSchema,
@@ -11,6 +12,7 @@ import {
   sessionSummarySchema,
   transitionRequestSchema,
 } from "../shared/contracts.ts";
+import { defaultAiFilterService } from "./ai.ts";
 import {
   buildSessionSummary,
   filterEnvironments,
@@ -27,6 +29,23 @@ export interface RiskRankingResult {
   source: "ai" | "rules";
 }
 
+type LegacyFilterCommand = {
+  state: string;
+  stuckOnly: boolean;
+  search: string;
+  step: number | null;
+  source: "ai" | "model" | "rules";
+  reason?: "not configured" | "timeout" | "invalid output" | "unavailable" | "cooling down";
+};
+
+type QueryFilterCommand = {
+  query: Record<string, unknown>;
+  source: "ai" | "model" | "rules";
+  reason?: "not configured" | "timeout" | "invalid output" | "unavailable" | "cooling down";
+};
+
+export type FilterCommandParser = (command: string, clientKey?: string) => Promise<LegacyFilterCommand | QueryFilterCommand> | LegacyFilterCommand | QueryFilterCommand;
+
 export type RiskRanker = (
   environments: Environment[],
   now: Date,
@@ -37,6 +56,7 @@ export interface ApiOptions {
   environments: Map<string, Environment>;
   now?: () => Date;
   riskRanker?: RiskRanker;
+  filterParser?: FilterCommandParser;
   corsOrigins?: string[];
 }
 
@@ -46,6 +66,7 @@ const problemTitles: Record<number, string> = {
   404: "Not Found",
   409: "Conflict",
   413: "Content Too Large",
+  429: "Too Many Requests",
   500: "Internal Server Error",
 };
 
@@ -85,10 +106,17 @@ function createOpenApiDocument() {
           summary: "List, filter, and sort lab environments",
           parameters: [
             { name: "state", in: "query", schema: { type: "string", enum: ["all", "provisioning", "ready", "in_use", "failed", "deprovisioned"] } },
+            { name: "states", in: "query", schema: { type: "array", items: { type: "string", enum: environmentStates } } },
             { name: "q", in: "query", schema: { type: "string", maxLength: dashboardConfig.maxSearchLength } },
-            { name: "sort", in: "query", schema: { type: "string", enum: ["learner", "state", "step", "time", "spend"] } },
+            { name: "minutesMin", in: "query", schema: { type: "integer", minimum: 0, maximum: dashboardConfig.maxFilterMinutes } },
+            { name: "minutesMax", in: "query", schema: { type: "integer", minimum: 0, maximum: dashboardConfig.maxFilterMinutes } },
+            { name: "failureReasonContains", in: "query", schema: { type: "string", maxLength: dashboardConfig.maxIssueLength } },
+            { name: "lab", in: "query", schema: { type: "string", enum: labNames } },
+            { name: "sort", in: "query", schema: { type: "string", enum: ["severity", "learner", "state", "step", "time", "spend"] } },
             { name: "direction", in: "query", schema: { type: "string", enum: ["asc", "desc"] } },
             { name: "riskOnly", in: "query", schema: { type: "boolean" } },
+            { name: "stuckOnly", in: "query", schema: { type: "boolean" } },
+            { name: "step", in: "query", schema: { type: "integer", minimum: 1, maximum: dashboardConfig.stepNames.length } },
             { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
             { name: "pageSize", in: "query", schema: { type: "integer", minimum: 1, maximum: dashboardConfig.environmentCount } },
           ],
@@ -114,6 +142,13 @@ function createOpenApiDocument() {
       "/session-summary": {
         get: { summary: "Read session totals and estimated spend", responses: { "200": { description: "Current session summary." } } },
       },
+      "/ai/filter": {
+        post: {
+          summary: "Parse a natural-language environment filter",
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["command"], properties: { command: { type: "string" } } } } } },
+          responses: { "200": { description: "Parsed filter state with the parsing source." } },
+        },
+      },
       "/ai/at-risk": {
         get: { summary: "Rank environments at risk of delay or failure", responses: { "200": { description: "AI-ranked or deterministic at-risk environments." } } },
       },
@@ -134,6 +169,15 @@ export function createApi(options: ApiOptions): Express {
   const now = options.now ?? (() => new Date());
   const defaultOrigins = [`http://127.0.0.1:${dashboardConfig.webPort}`, `http://localhost:${dashboardConfig.webPort}`];
   const allowedOrigins = new Set(options.corsOrigins ?? process.env.CORS_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? defaultOrigins);
+  const rateLimitWindowMs = 60_000;
+  const rateLimitMaxRequests = 20;
+  const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+  const aiFilterService = options.filterParser ? null : defaultAiFilterService();
+
+  const getClientKey = (request: Request): string => {
+    const forwarded = request.get("x-forwarded-for") ?? request.get("x-real-ip") ?? request.ip ?? "unknown";
+    return forwarded.split(",")[0].trim() || "unknown";
+  };
 
   app.disable("x-powered-by");
   app.use((request, response, next) => {
@@ -145,7 +189,7 @@ export function createApi(options: ApiOptions): Express {
       }
       response.setHeader("Access-Control-Allow-Origin", origin);
       response.setHeader("Vary", "Origin");
-      response.setHeader("Access-Control-Allow-Methods", "GET, PATCH, OPTIONS");
+      response.setHeader("Access-Control-Allow-Methods", "GET, PATCH, POST, OPTIONS");
       response.setHeader("Access-Control-Allow-Headers", "Content-Type");
       response.setHeader("Access-Control-Max-Age", String(dashboardConfig.corsMaxAgeSeconds));
     }
@@ -166,8 +210,16 @@ export function createApi(options: ApiOptions): Express {
     const currentTime = now();
     const filters = {
       state: query.data.state,
+      states: query.data.states,
       search: query.data.q,
       riskOnly: query.data.riskOnly,
+      stuckOnly: query.data.stuckOnly,
+      step: query.data.step,
+      minutesOnStep: query.data.minutesMin === undefined && query.data.minutesMax === undefined
+        ? undefined
+        : { min: query.data.minutesMin, max: query.data.minutesMax },
+      failureReasonContains: query.data.failureReasonContains,
+      lab: query.data.lab,
     };
     const matching = sortEnvironments(
       filterEnvironments([...options.environments.values()], filters, currentTime),
@@ -176,11 +228,17 @@ export function createApi(options: ApiOptions): Express {
       currentTime,
     );
     const start = (query.data.page - 1) * query.data.pageSize;
+    const items = matching.slice(start, start + query.data.pageSize).map((environment) => toEnvironmentView(environment, currentTime));
     sendValidated(response, environmentPageSchema, {
-      items: matching.slice(start, start + query.data.pageSize).map((environment) => toEnvironmentView(environment, currentTime)),
+      items,
       total: matching.length,
       page: query.data.page,
       pageSize: query.data.pageSize,
+      groups: {
+        failed: items.filter((environment) => environment.priorityGroup === "failed").length,
+        stuck: items.filter((environment) => environment.priorityGroup === "stuck").length,
+        other: items.filter((environment) => environment.priorityGroup === "other").length,
+      },
       updatedAt: currentTime.toISOString(),
     });
   });
@@ -214,6 +272,64 @@ export function createApi(options: ApiOptions): Express {
     }
     if (transition.changed) options.environments.set(id.data, transition.environment);
     sendValidated(response, environmentSchema, toEnvironmentView(transition.environment, currentTime));
+  });
+
+  app.post("/api/ai/filter", async (request, response, next) => {
+    const body = z.object({ command: z.string().trim().min(1).max(dashboardConfig.maxSearchLength) }).safeParse(request.body);
+    if (!body.success) {
+      sendProblem(response, 400, "The filter command must be a non-empty string within the supported length.", request.path);
+      return;
+    }
+
+    const clientKey = getClientKey(request);
+    const nowMs = Date.now();
+    const bucket = rateLimitBuckets.get(clientKey);
+    if (bucket) {
+      if (bucket.resetAt <= nowMs) {
+        rateLimitBuckets.delete(clientKey);
+      } else if (bucket.count >= rateLimitMaxRequests) {
+        sendProblem(response, 429, "Too many requests. Please try again in a moment.", request.path);
+        return;
+      }
+    }
+    if (!rateLimitBuckets.has(clientKey)) {
+      rateLimitBuckets.set(clientKey, { count: 1, resetAt: nowMs + rateLimitWindowMs });
+    } else {
+      const current = rateLimitBuckets.get(clientKey)!;
+      current.count += 1;
+    }
+
+    try {
+      const result = options.filterParser
+        ? await options.filterParser(body.data.command, clientKey)
+        : await aiFilterService!.parse(body.data.command, clientKey);
+      const isQueryResult = "query" in result;
+      const source = result.source === "ai" ? "model" : result.source;
+      const responseBody = isQueryResult
+        ? {
+            source,
+            ...(result.reason ? { reason: result.reason } : {}),
+            query: result.query,
+          }
+        : {
+            source,
+            ...(result.reason ? { reason: result.reason } : {}),
+            state: result.state ?? "all",
+            stuckOnly: result.stuckOnly ?? false,
+            search: result.search ?? "",
+            step: result.step ?? null,
+          };
+
+      const parsed = aiFilterResponseSchema.safeParse(responseBody);
+      if (!parsed.success) {
+        sendProblem(response, 500, "The server could not produce a valid filter response.", request.path);
+        return;
+      }
+
+      response.json(parsed.data);
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.get("/api/ai/at-risk", async (_request, response, next) => {

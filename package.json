@@ -15,10 +15,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "node --test test/e2e/*.test.mjs",
-    "capture": "node scripts/capture-screenshots.mjs",
-    "record": "node scripts/record-demo.mjs"
+    "capture:submission": "node scripts/capture-submission.mjs",
+    "eval:ai": "node --experimental-strip-types scripts/eval-ai.mjs"
   },
   "dependencies": {
+    "@radix-ui/colors": "^3.0.0",
     "express": "5.3.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
